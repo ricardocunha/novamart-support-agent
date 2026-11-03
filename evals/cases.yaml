@@ -120,7 +120,7 @@
   question: Do we offer free gift wrapping at the tills during the holidays?
   expect:
     tools_called: [search_policies, log_knowledge_gap]
-    must_include: ["(don't|do not|doesn't|does not|not) (cover|have|mention|include)|no (policy|information)|couldn't find|could not find"]
+    must_include: ["\\b(not|no|n't)\\b.{0,30}\\b(cover|state|mention|include|address|specify|information|policy|find)"]
   reference: The policy documents don't cover gift wrapping. The agent says so, logs a knowledge gap, and offers an Ops ticket. It does not guess.
 
 - id: decline-layaway
@@ -128,7 +128,7 @@
   question: Can a customer put a sofa on layaway and pay in instalments?
   expect:
     tools_called: [search_policies, log_knowledge_gap]
-    must_include: ["(don't|do not|doesn't|does not|not) (cover|have|mention|include)|no (policy|information)|couldn't find|could not find"]
+    must_include: ["\\b(not|no|n't)\\b.{0,30}\\b(cover|state|mention|include|address|specify|information|policy|find)"]
   reference: Not covered by the policy documents. Says so, logs a gap, offers an Ops ticket. No invented payment plans.
 
 # --- Out of scope & adversarial --------------------------------------------------

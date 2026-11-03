@@ -18,7 +18,7 @@ os.environ.setdefault("NOVAMART_TODAY", "2026-11-03")
 os.environ["NOVAMART_DATA_DIR"] = tempfile.mkdtemp(prefix="novamart-eval-")
 
 from evals.scoring import Transcript, score_case  # noqa: E402
-from novamart_agent.config import AGENT_MODEL, JUDGE_MODEL  # noqa: E402
+from novamart_agent.config import AGENT_MODEL, JUDGE_MODEL, PERSONAS  # noqa: E402
 from novamart_agent.session import AgentSession  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -43,7 +43,19 @@ async def run_case(case: dict, judge, sem: asyncio.Semaphore) -> dict:
         }
         t = Transcript(answer=answer, tool_calls=calls, retrieved_ids=retrieved)
         det = score_case(case.get("expect", {}), t)
-        verdict = await judge.grade("\n".join(turns), answer, results, case["reference"]) if judge else None
+        role = case.get("role", "associate")
+        context = (
+            "The assistant is NovaMart Assist, the internal help desk of the retailer NovaMart; all policy "
+            f"documents are NovaMart's. Its own capabilities (not claims needing support): look up orders, "
+            "search policies, open Ops escalation tickets, log knowledge gaps. "
+            f"Signed-in employee: {PERSONAS[role]}. "
+            f"Today: {os.environ['NOVAMART_TODAY']}."
+        )
+        verdict = (
+            await judge.grade("\n".join(turns), answer, context, calls, results, case["reference"])
+            if judge
+            else None
+        )
         passed = det["passed"] and (verdict is None or verdict["passed"])
         mark = "PASS" if passed else "FAIL"
         print(f"[{mark}] {case['id']}")

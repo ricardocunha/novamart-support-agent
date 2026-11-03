@@ -114,14 +114,29 @@ The judge is a **stronger model than the agent** to reduce self-preference bias,
 
 ### Results
 
-<!-- RESULTS -->
+Agent `gemini-3.5-flash`, judge `gemini-3.1-pro-preview`, clock pinned to 2026-11-03. Each failure was triaged as either an **agent** bug or an **eval** bug:
+
+| Iteration | Pass rate | What the failures showed | Change |
+|---|---|---|---|
+| 1 | 21/25 | Judge marked "Jan 31 **2027**" and ticket "urgency: high" as unsupported, because it never saw the date or the tool *calls* · decline regex missed "do not *currently* cover" · **agent** left out that a $649 return needs a manager override | Judge gets the same context as the agent (date, persona, tool calls) · wider regex · prompt: always say who approves |
+| 2 | 22/25 | Judge penalised the word "NovaMart" (no company context) · **agent** invented "involve your manager for an exception" | Company context for the judge · prompt: never invent exceptions or approval paths |
+| 3–4 | 20/25, 24/25 | **Variance.** Same code, 4-point swing. 4 of 5 failures were one pattern: small, helpful-sounding embellishments ("gift receipt", "submit the cheque request in the system", "Ops will process the carrier claim") · one **retrieval miss**: the approval-limits section was never searched | Prompt: answer only what changes this case, no unstated procedural steps · also search approval limits for refunds, credits and waivers |
+| 5–6 | 24/25, 23/25 | **Agent** misapplied the $500 returns limit to a lost order after ticketing ("you can refund at the counter") · judge treated "I can open a ticket" as invented (didn't know the tools) | Ticket confirmations hand ownership to Ops · judge told the assistant's capabilities |
+| 7–9 | 25/25, 25/25, 24/25 | Only failure was the regex again ("do not *state*"), with judge 5/5 | Decline wording check made phrasing-tolerant (the tool call is the real signal) |
+| **Final** | **25/25** | Faithfulness 5.00, correctness 5.00 | [`evals/report.md`](evals/report.md) |
+
+**What I take from this:**
+- **Half the early failures were in the eval, not the agent.** A judge that sees less context than the agent penalises correct derivations, and regex checks on phrasing are brittle. The fix in both cases was making the eval *fairer*, not looser. The pass threshold stayed strict, and a single unsupported detail (faithfulness 3) still fails.
+- **The dominant real failure mode is embellishment, not hallucinated policy.** The model never invented a return window. It added plausible procedure ("submit it in the system", "ask your manager for an exception"). That is exactly what would mislead a store employee, and only the faithfulness judge catches it.
+- **Single runs lie.** The same code scored 20 and 24. A production gate needs N trials per case and a pass rate with a confidence band, not one green tick (see "more time").
+- **Caveat:** 25 cases that I wrote myself, after tuning the prompt against them, are a smoke test, not a benchmark. The prompt changes were general rules rather than per-case patches, but the real check is a held-out set built from real employee questions.
 
 ---
 
 ## What I'd do with more time
 
 - **A deterministic `check_return_eligibility(order_id, sku, reason)` tool.** Returns are the most frequent question type and pure rule logic (window by category, holiday extension, restocking fee, approval threshold). Encoding them in tested code and letting the model explain the result would remove an entire class of reasoning errors.
-- **Grow the eval set from real traffic:** seed it from the gap log and Ops tickets, then run multiple trials per case to measure variance instead of a single pass/fail.
+- **Grow the eval set from real traffic and measure variance properly:** seed a *held-out* set from the gap log and Ops tickets, and run `--trials N` per case to report pass rates with confidence intervals instead of single runs.
 - **Deploy to Vertex AI Agent Engine and register in Gemini Enterprise.** Swap the numpy index for a Vertex AI Search datastore (same tool contract).
 - **A Looker Studio view of the gap log** for the Ops team, plus a "suggest a policy draft" action that turns a cluster of gaps into a first-draft doc for the owner to approve.
 - **Customer-facing phrasing:** a one-tap "say it to the customer" rewrite of the answer for use at the counter.

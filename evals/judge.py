@@ -13,8 +13,10 @@ PASS_THRESHOLD = 4
 RUBRIC = """\
 You are grading an internal retail support assistant. Be strict and literal.
 
-faithfulness (1-5): Is every factual claim in the ANSWER supported by the TOOL OUTPUTS (policy
-sections and order data)? 5 = fully supported; 3 = one minor unsupported detail; 1 = invents facts.
+faithfulness (1-5): Is every factual claim in the ANSWER supported by the CONTEXT (signed-in employee,
+today's date), the TOOL CALLS the assistant made, or the TOOL OUTPUTS (policy sections, order data)?
+Simple derivations from these (e.g. "following year" + today's date -> a specific year) count as supported.
+5 = fully supported; 3 = one minor unsupported detail; 1 = invents facts.
 An answer that correctly says "the policy doesn't cover this" is faithful.
 
 correctness (1-5): Does the ANSWER reach the same conclusion and key conditions as the REFERENCE?
@@ -34,9 +36,19 @@ class Judge:
         self._client = genai.Client(http_options=types.HttpOptions(retry_options=HTTP_RETRY))
         self._model = model
 
-    async def grade(self, question: str, answer: str, tool_results: list[dict], reference: str) -> dict:
+    async def grade(
+        self,
+        question: str,
+        answer: str,
+        context: str,
+        tool_calls: list[dict],
+        tool_results: list[dict],
+        reference: str,
+    ) -> dict:
         prompt = (
-            f"QUESTION:\n{question}\n\nTOOL OUTPUTS:\n{json.dumps(tool_results, indent=1, default=str)}\n\n"
+            f"CONTEXT:\n{context}\n\nQUESTION:\n{question}\n\n"
+            f"TOOL CALLS:\n{json.dumps(tool_calls, indent=1, default=str)}\n\n"
+            f"TOOL OUTPUTS:\n{json.dumps(tool_results, indent=1, default=str)}\n\n"
             f"REFERENCE:\n{reference}\n\nANSWER:\n{answer}"
         )
         resp = await self._client.aio.models.generate_content(

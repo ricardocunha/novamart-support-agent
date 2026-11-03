@@ -14,3 +14,6 @@ __pycache__/
 # runtime data written by the agent
 data/tickets.jsonl
 data/gaps.jsonl
+
+# adk web local sessions
+.adk/
