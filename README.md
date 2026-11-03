@@ -10,6 +10,7 @@ Built with **Google ADK** and **Gemini** (Gemini API, or Vertex AI with a single
 | Policy documents (7, invented) | [`docs/policies/`](docs/policies) |
 | Evaluation (25 cases + runner + report) | [`evals/`](evals) · [`evals/report.md`](evals/report.md) |
 | Production note | [`PRODUCTION.md`](PRODUCTION.md) |
+| Production architecture (interactive) | [`docs/architecture.html`](docs/architecture.html) · source [`docs/architecture.json`](docs/architecture.json) |
 | Scope / decision log | [`SCOPE.md`](SCOPE.md) · [`docs/DECISIONS.md`](docs/DECISIONS.md) |
 
 ---
@@ -58,7 +59,13 @@ Tickets go to `data/tickets.jsonl` and gaps to `data/gaps.jsonl`.
 
 ---
 
-## How it works
+## Target architecture
+
+![NovaMart Assist production architecture](docs/architecture.png)
+
+Open [`docs/architecture.html`](docs/architecture.html) for the interactive version, with guided views for the question path, grounding, and the Ops loop. Rationale is in [`PRODUCTION.md`](PRODUCTION.md).
+
+## How it works (prototype)
 
 ```
 employee ──► ADK LlmAgent (Gemini Flash, temp 0.1)

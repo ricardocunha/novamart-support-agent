@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "NovaMart Assist \u2014 Production Architecture",
+    "output": "architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "ask-path",
+        "label": "Employee question path",
+        "focus": [
+          "employee",
+          "gemini-enterprise",
+          "model-armor",
+          "agent",
+          "gemini"
+        ],
+        "note": "A store employee asks in Gemini Enterprise; the request is screened, then handled by the ADK agent reasoning with Gemini."
+      },
+      {
+        "id": "grounding",
+        "label": "Grounding and live data",
+        "focus": [
+          "agent",
+          "vertex-search",
+          "policy-sources",
+          "apigee",
+          "oms"
+        ],
+        "note": "Policy answers come only from the governed search datastore; order facts come from the OMS through Apigee, read-only."
+      },
+      {
+        "id": "close-the-loop",
+        "label": "Close the loop with Ops",
+        "focus": [
+          "agent",
+          "ticketing",
+          "gap-log"
+        ],
+        "note": "Unanswerable or Ops-owned cases become pre-filled tickets; every decline lands in the knowledge-gap log that drives doc fixes."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "employee",
+      "type": "external",
+      "label": "Store employee",
+      "sublabel": "associate / manager",
+      "pos": [
+        40,
+        190
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "identity",
+      "type": "security",
+      "label": "Workforce SSO",
+      "sublabel": "Workspace / Entra",
+      "pos": [
+        250,
+        50
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "role + store claims"
+    },
+    {
+      "id": "gemini-enterprise",
+      "type": "frontend",
+      "label": "Gemini Enterprise",
+      "sublabel": "chat surface + connectors",
+      "pos": [
+        250,
+        190
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "model-armor",
+      "type": "security",
+      "label": "Model Armor",
+      "sublabel": "injection screening",
+      "pos": [
+        480,
+        190
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "NovaMart Assist",
+      "sublabel": "ADK on Agent Engine",
+      "pos": [
+        700,
+        190
+      ],
+      "size": [
+        160,
+        64
+      ],
+      "tag": "grounding contract"
+    },
+    {
+      "id": "gemini",
+      "type": "cloud",
+      "label": "Gemini",
+      "sublabel": "Flash (agent) \u00b7 Pro (judge)",
+      "pos": [
+        700,
+        50
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "vertex-search",
+      "type": "database",
+      "label": "Vertex AI Search",
+      "sublabel": "policy datastore",
+      "pos": [
+        480,
+        340
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "policy-sources",
+      "type": "external",
+      "label": "Policy sources",
+      "sublabel": "SharePoint / Drive",
+      "pos": [
+        480,
+        470
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "apigee",
+      "type": "security",
+      "label": "Apigee",
+      "sublabel": "read-only, PII masked",
+      "pos": [
+        705,
+        340
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "oms",
+      "type": "external",
+      "label": "Order management",
+      "sublabel": "OMS API",
+      "pos": [
+        705,
+        470
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "ticketing",
+      "type": "external",
+      "label": "Ops ticketing",
+      "sublabel": "ServiceNow / Jira",
+      "pos": [
+        940,
+        340
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "gap-log",
+      "type": "database",
+      "label": "BigQuery",
+      "sublabel": "knowledge-gap log",
+      "pos": [
+        940,
+        190
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "Looker for Ops"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Google Cloud project \u00b7 VPC Service Controls",
+      "wraps": [
+        "model-armor",
+        "agent",
+        "gemini",
+        "vertex-search",
+        "apigee",
+        "gap-log"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ask",
+      "from": "employee",
+      "to": "gemini-enterprise",
+      "label": "ask",
+      "variant": "emphasis"
+    },
+    {
+      "id": "sso",
+      "from": "identity",
+      "to": "gemini-enterprise",
+      "label": "SSO",
+      "variant": "security",
+      "labelDy": 24
+    },
+    {
+      "id": "screen",
+      "from": "gemini-enterprise",
+      "to": "model-armor",
+      "label": "A2A",
+      "variant": "emphasis"
+    },
+    {
+      "id": "invoke",
+      "from": "model-armor",
+      "to": "agent",
+      "variant": "emphasis"
+    },
+    {
+      "id": "reason",
+      "from": "agent",
+      "to": "gemini",
+      "label": "tool calls"
+    },
+    {
+      "id": "search",
+      "from": "agent",
+      "to": "vertex-search",
+      "label": "search_policies"
+    },
+    {
+      "id": "sync",
+      "from": "policy-sources",
+      "to": "vertex-search",
+      "label": "sync",
+      "variant": "dashed"
+    },
+    {
+      "id": "order",
+      "from": "agent",
+      "to": "apigee",
+      "label": "get_order_status",
+      "labelDy": 24
+    },
+    {
+      "id": "oms-read",
+      "from": "apigee",
+      "to": "oms"
+    },
+    {
+      "id": "ticket",
+      "from": "agent",
+      "to": "ticketing",
+      "label": "ticket (confirmed)"
+    },
+    {
+      "id": "gap",
+      "from": "agent",
+      "to": "gap-log",
+      "label": "log gap",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Buy vs build",
+      "items": [
+        "Gemini Enterprise: SSO, UI, connectors, governance",
+        "Custom ADK agent: orders, approval rules, Ops loop"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Prototype stand-ins",
+      "items": [
+        "numpy index \u2192 Vertex AI Search",
+        "orders.json \u2192 Apigee + OMS",
+        "tickets/gaps.jsonl \u2192 ServiceNow / BigQuery"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Guardrails",
+      "items": [
+        "Role from SSO claims, enforced in tools",
+        "Tickets only after employee confirms",
+        "Eval gate in CI before any change ships"
+      ]
+    }
+  ]
+}
