@@ -1,0 +1,16 @@
+# superdeck data directory
+.superdeck/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# secrets
+.env
+
+# runtime data written by the agent
+data/tickets.jsonl
+data/gaps.jsonl
