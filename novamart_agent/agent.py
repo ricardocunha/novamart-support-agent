@@ -3,10 +3,11 @@
 from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.readonly_context import ReadonlyContext
+from google.adk.models.google_llm import Gemini
 from google.genai import types
 
 from novamart_agent import clock
-from novamart_agent.config import AGENT_MODEL, DEFAULT_ROLE, PERSONAS
+from novamart_agent.config import AGENT_MODEL, DEFAULT_ROLE, HTTP_RETRY, PERSONAS
 from novamart_agent.prompts import INSTRUCTION
 from novamart_agent.tools import ALL_TOOLS
 
@@ -30,7 +31,7 @@ def _instruction(ctx: ReadonlyContext) -> str:
 
 root_agent = LlmAgent(
     name="novamart_assist",
-    model=AGENT_MODEL,
+    model=Gemini(model=AGENT_MODEL, retry_options=HTTP_RETRY),
     description="Answers NovaMart store employees' policy and order questions, grounded in company docs.",
     instruction=_instruction,
     tools=ALL_TOOLS,

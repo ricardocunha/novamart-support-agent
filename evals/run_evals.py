@@ -78,12 +78,14 @@ def write_report(rows: list[dict], judged: bool) -> Path:
         *[f"| {c} | {p}/{n} |" for c, (p, n) in sorted(by_cat.items())],
     ]
     if judged:
-        js = [r["judge"] for r in rows]
-        lines += [
-            "",
-            f"Mean judge scores: faithfulness **{sum(j['faithfulness'] for j in js) / total:.2f}**, "
-            f"correctness **{sum(j['correctness'] for j in js) / total:.2f}** (1–5)",
-        ]
+        js = [r["judge"] for r in rows if r["judge"]]
+        if js:
+            lines += [
+                "",
+                f"Mean judge scores over {len(js)} graded cases: "
+                f"faithfulness **{sum(j['faithfulness'] for j in js) / len(js):.2f}**, "
+                f"correctness **{sum(j['correctness'] for j in js) / len(js):.2f}** (1–5)",
+            ]
     lines += ["", "## Cases", "", "| | Case | Tools | Failed checks | Judge (F/C) |", "|---|---|---|---|---|"]
     for r in rows:
         failed = ", ".join(k for k, v in r["checks"].items() if not v) or "—"
@@ -113,6 +115,22 @@ def write_report(rows: list[dict], judged: bool) -> Path:
     return out
 
 
+async def _safe(coro, case: dict) -> dict:
+    """An API failure (quota, outage) marks one case as errored instead of aborting the run."""
+    try:
+        return await coro
+    except Exception as e:  # noqa: BLE001
+        print(f"[ERROR] {case['id']}: {type(e).__name__}")
+        return {
+            "case": case,
+            "answer": f"ERROR: {str(e)[:300]}",
+            "tools": [],
+            "checks": {"ran": False},
+            "judge": None,
+            "passed": False,
+        }
+
+
 async def main(args) -> int:
     cases = yaml.safe_load((HERE / "cases.yaml").read_text())
     if args.only:
@@ -123,7 +141,7 @@ async def main(args) -> int:
 
         judge = Judge()
     sem = asyncio.Semaphore(args.concurrency)
-    rows = await asyncio.gather(*(run_case(c, judge, sem) for c in cases))
+    rows = await asyncio.gather(*(_safe(run_case(c, judge, sem), c) for c in cases))
     out = write_report(list(rows), judged=judge is not None)
     ok = sum(r["passed"] for r in rows)
     print(f"\n{ok}/{len(rows)} passed — report: {out}")

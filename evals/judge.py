@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from novamart_agent.config import JUDGE_MODEL
+from novamart_agent.config import HTTP_RETRY, JUDGE_MODEL
 
 PASS_THRESHOLD = 4
 
@@ -31,7 +31,7 @@ class Verdict(BaseModel):
 
 class Judge:
     def __init__(self, model: str = JUDGE_MODEL):
-        self._client = genai.Client()
+        self._client = genai.Client(http_options=types.HttpOptions(retry_options=HTTP_RETRY))
         self._model = model
 
     async def grade(self, question: str, answer: str, tool_results: list[dict], reference: str) -> dict:

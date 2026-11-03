@@ -6,14 +6,16 @@ import numpy as np
 from google import genai
 from google.genai import types
 
-from novamart_agent.config import EMBEDDING_MODEL
+from novamart_agent.config import EMBEDDING_MODEL, HTTP_RETRY
 
 _TASK = {"document": "RETRIEVAL_DOCUMENT", "query": "RETRIEVAL_QUERY"}
 
 
 class GeminiEmbedder:
     def __init__(self, model: str = EMBEDDING_MODEL, dimensions: int = 768):
-        self._client = genai.Client()  # Gemini API key or Vertex AI, from env
+        self._client = genai.Client(
+            http_options=types.HttpOptions(retry_options=HTTP_RETRY)
+        )  # Gemini API key or Vertex AI, from env
         self._model = model
         self._dims = dimensions
 
