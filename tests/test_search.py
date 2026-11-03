@@ -75,3 +75,11 @@ def test_load_or_build_rebuilds_when_a_doc_changes(tmp_path):
     index = PolicyIndex.load_or_build(policies, cache, rebuilt)
     assert rebuilt.calls == 1
     assert index.search("loyalty", k=1)[0]["chunk_id"] == "DOC-A#loyalty"
+
+
+def test_load_or_build_rebuilds_when_embedder_identity_changes(tmp_path):
+    policies, cache = write_docs(tmp_path), tmp_path / "index.npz"
+    PolicyIndex.load_or_build(policies, cache, FakeEmbedder(), embedder_id="model-a/768")
+    other = FakeEmbedder()
+    PolicyIndex.load_or_build(policies, cache, other, embedder_id="model-b/768")
+    assert other.calls == 1

@@ -60,3 +60,9 @@ def test_must_not_include_hit_fails():
         {"must_not_include": ["15-day"]}, transcript(ANSWER, retrieved=["POL-RET-001#category-exceptions"])
     )
     assert result["checks"]["must_not_include"] is False
+
+
+def test_multiple_ids_in_one_bracket_are_all_parsed_and_checked():
+    t = transcript("Yes [POL-RET-001#approvals, POL-XXX-999#made-up].", retrieved=["POL-RET-001#approvals"])
+    assert t.citations == {"POL-RET-001#approvals", "POL-XXX-999#made-up"}
+    assert score_case({}, t)["checks"]["citations_grounded"] is False

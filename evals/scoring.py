@@ -3,7 +3,8 @@
 import re
 from dataclasses import dataclass, field
 
-CITATION = re.compile(r"\[([A-Z]{3}-[A-Z]{3}-\d{3}(?:#[a-z0-9-]+)?)\]")
+BRACKET = re.compile(r"\[([^\]]+)\]")
+CITATION_ID = re.compile(r"[A-Z]{3}-[A-Z]{3}-\d{3}(?:#[a-z0-9-]+)?")
 
 
 @dataclass
@@ -18,7 +19,8 @@ class Transcript:
 
     @property
     def citations(self) -> set[str]:
-        return set(CITATION.findall(self.answer))
+        # Every doc id inside any [...] counts, so "[A#x, B#y]" can't smuggle in an unretrieved B.
+        return {cid for inside in BRACKET.findall(self.answer) for cid in CITATION_ID.findall(inside)}
 
 
 def score_case(expect: dict, t: Transcript) -> dict:

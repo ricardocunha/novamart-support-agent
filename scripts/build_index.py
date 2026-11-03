@@ -5,5 +5,6 @@ from novamart_agent.embeddings import GeminiEmbedder
 from novamart_agent.retrieval import PolicyIndex
 
 if __name__ == "__main__":
-    index = PolicyIndex.load_or_build(POLICY_DIR, INDEX_PATH, GeminiEmbedder())
+    embedder = GeminiEmbedder()
+    PolicyIndex.load_or_build(POLICY_DIR, INDEX_PATH, embedder, embedder_id=embedder.id)
     print(f"Index ready at {INDEX_PATH}")

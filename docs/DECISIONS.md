@@ -6,7 +6,7 @@ Settled during the design grilling session (2026-11-03). Scope lives in [`../SCO
 | # | Decision | Choice |
 |---|---|---|
 | D1 | Agent framework | **Google ADK (Python)** — `LlmAgent` + function tools |
-| D2 | Model access | **Gemini API key** (`GOOGLE_API_KEY`) by default; Vertex AI via `GOOGLE_GENAI_USE_VERTEXAI=true`. Agent model: `gemini-2.5-flash` (configurable) |
+| D2 | Model access | **Gemini API key** (`GOOGLE_API_KEY`) by default; Vertex AI via `GOOGLE_GENAI_USE_VERTEXAI=true`. Agent model: `gemini-3.5-flash` (configurable). *Revised during build: `gemini-2.5-*` is no longer available to new API keys.* |
 | D11 | Tooling | Python **3.14** (fallback 3.13 if ADK deps lack wheels — documented), **uv**, `ruff`, `pytest`, no Docker |
 | D15 | Python version | `requires-python = ">=3.14"` (local 3.14.8) |
 
@@ -15,7 +15,7 @@ Settled during the design grilling session (2026-11-03). Scope lives in [`../SCO
 |---|---|---|
 | D3 | Strategy | Lightweight RAG exposed as `search_policies(query)` tool — Gemini embeddings + numpy cosine; results carry `doc_id#section` |
 | D5 | Documents | ~7 invented NovaMart Markdown docs with front-matter (`doc_id`, `owner`, `last_updated`, `version`) and deliberate edge cases: returns & refunds, exchanges, warranty/electronics, price match, loyalty, click-and-collect/shipping, damaged-goods/escalation SOP |
-| D12 | Index | `gemini-embedding-001`, chunked on `##` sections, cached to `data/index.npz` (committed), rebuilt when doc hashes change via `scripts/build_index.py` |
+| D12 | Index | `gemini-embedding-001`, chunked on `##` sections, cached to `data/index.npz` (committed), rebuilt when doc hashes **or the embedding model/dimensions** change. Relevance floor **0.55** (measured: covered queries 0.65–0.79, uncovered 0.51–0.63; the model makes the final relevance call) |
 
 ## Tools (D8)
 1. `search_policies(query)` — RAG over docs.
@@ -24,9 +24,10 @@ Settled during the design grilling session (2026-11-03). Scope lives in [`../SCO
 4. `log_knowledge_gap(question, reason)` → `data/gaps.jsonl`.
 
 ## Behaviour contract (D9)
-- Every policy claim cites a `doc_id` retrieved this turn. No citation → no claim.
+- Every policy claim cites a `chunk_id` retrieved **in this conversation** (refined from "this turn" so follow-ups like "yes, open the ticket" can reuse earlier lookups). No citation → no claim.
 - Nothing relevant retrieved → say "I don't know", **auto-log gap**, **offer** (not auto-create) a ticket.
-- Policy requires manager/ops approval → answer **and** offer ticket.
+- Policy requires **manager** approval → answer and say who approves (associate: call your manager; manager: you can approve). No ticket — the manager is in the store. *Refined during build.*
+- Policy requires **Ops** / above-manager action → answer **and** offer ticket.
 - Out-of-scope (HR, salary, chit-chat) → polite redirect, no gap log.
 
 ## User context (D13)
@@ -39,9 +40,9 @@ Mock employee persona in ADK session state: `store_id`, `role` ∈ {associate, m
 `adk web` for demo (shows tool traces) + thin CLI `python -m novamart_agent.chat`. No custom UI.
 
 ## Evaluation (D10, D17)
-- `evals/cases.yaml`, ~20 cases: grounded answers, tool lookups, multi-step (order + policy), declines, injection/out-of-scope, ticket flow.
-- Custom runner: deterministic checks (expected tools called, required doc_ids cited, key facts regex, decline expected) + LLM-as-judge.
-- Judge: stronger model (`gemini-2.5-pro`), temperature 0, rubric 1–5 for faithfulness & correctness, pass threshold; `--no-judge` for offline/cheap runs.
+- `evals/cases.yaml`, 25 cases: grounded answers, tool lookups, multi-step (order + policy), declines, injection/out-of-scope, ticket flow.
+- Custom runner: deterministic checks (expected tools called, required doc_ids cited, key facts regex, decline expected) + LLM-as-judge. Runner enforces "offer, don't auto-create": no single-turn case may call `create_escalation_ticket`.
+- Judge: stronger model (`gemini-3.1-pro-preview`; revised from `gemini-2.5-pro`, unavailable), temperature 0, rubric 1–5 for faithfulness & correctness, pass threshold; `--no-judge` for offline/cheap runs.
 - Output: `evals/report.md` scorecard. Mention `adk eval` / Vertex Gen AI Evaluation Service as production options.
 
 ## Production note stance (D16)

@@ -42,7 +42,11 @@ async def run_case(case: dict, judge, sem: asyncio.Semaphore) -> dict:
             for r in (res["response"] or {}).get("results", [])
         }
         t = Transcript(answer=answer, tool_calls=calls, retrieved_ids=retrieved)
-        det = score_case(case.get("expect", {}), t)
+        expect = dict(case.get("expect", {}))
+        if not case.get("turns"):
+            # D9: tickets are offered, never auto-created -> no single-turn case may open one.
+            expect["tools_not_called"] = [*expect.get("tools_not_called", []), "create_escalation_ticket"]
+        det = score_case(expect, t)
         role = case.get("role", "associate")
         context = (
             "The assistant is NovaMart Assist, the internal help desk of the retailer NovaMart; all policy "
@@ -70,7 +74,7 @@ async def run_case(case: dict, judge, sem: asyncio.Semaphore) -> dict:
 
 
 def write_report(rows: list[dict], judged: bool) -> Path:
-    total = len(rows)
+    total = len(rows) or 1
     ok = sum(r["passed"] for r in rows)
     by_cat = defaultdict(lambda: [0, 0])
     for r in rows:

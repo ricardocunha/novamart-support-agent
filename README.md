@@ -124,6 +124,7 @@ Agent `gemini-3.5-flash`, judge `gemini-3.1-pro-preview`, clock pinned to 2026-1
 | 5–6 | 24/25, 23/25 | **Agent** misapplied the $500 returns limit to a lost order after ticketing ("you can refund at the counter") · judge treated "I can open a ticket" as invented (didn't know the tools) | Ticket confirmations hand ownership to Ops · judge told the assistant's capabilities |
 | 7–9 | 25/25, 25/25, 24/25 | Only failure was the regex again ("do not *state*"), with judge 5/5 | Decline wording check made phrasing-tolerant (the tool call is the real signal) |
 | **Final** | **25/25** | Faithfulness 5.00, correctness 5.00 | [`evals/report.md`](evals/report.md) |
+| Post-review | 25/25 (deterministic only) | After code review tightened the checks (multi-ID citation brackets parsed; no ticket may be auto-created in single-turn cases) | Judge skipped: the Pro model's Tier-1 cap of 250 requests/day was used up by the runs above |
 
 **What I take from this:**
 - **Half the early failures were in the eval, not the agent.** A judge that sees less context than the agent penalises correct derivations, and regex checks on phrasing are brittle. The fix in both cases was making the eval *fairer*, not looser. The pass threshold stayed strict, and a single unsupported detail (faithfulness 3) still fails.
@@ -142,6 +143,11 @@ Agent `gemini-3.5-flash`, judge `gemini-3.1-pro-preview`, clock pinned to 2026-1
 - **Customer-facing phrasing:** a one-tap "say it to the customer" rewrite of the answer for use at the counter.
 
 **Deliberate cuts within the 4–6 h budget:** no auth (personas are mocked), JSON files instead of real systems, no deployment, no custom UI (`adk web` covers the demo).
+
+**Known limitations (accepted for a prototype):**
+- Ticket IDs are sequenced by reading `tickets.jsonl`, so two processes writing at once (e.g. `adk web` and the CLI) could clash. The real ticketing system issues the IDs in production.
+- Citations are checked against everything retrieved **in the conversation**, not per turn, so multi-turn follow-ups can reuse earlier lookups.
+- A manager override is handled in store ("call your manager"), so it's never ticketed. Only above-manager and Ops-owned cases get a ticket offer.
 
 ---
 

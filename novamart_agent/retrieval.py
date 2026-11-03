@@ -70,8 +70,9 @@ def _normalise(m: np.ndarray) -> np.ndarray:
     return m / np.where(norms == 0, 1, norms)
 
 
-def _docs_fingerprint(policy_dir: Path) -> str:
-    h = hashlib.sha256()
+def _fingerprint(policy_dir: Path, embedder_id: str) -> str:
+    """Changes when any doc changes or the embedding model/dimensions change."""
+    h = hashlib.sha256(embedder_id.encode())
     for path in sorted(policy_dir.glob("*.md")):
         h.update(path.name.encode())
         h.update(path.read_bytes())
@@ -90,9 +91,11 @@ class PolicyIndex:
         return cls(chunks, np.asarray(vectors, dtype=float), embedder)
 
     @classmethod
-    def load_or_build(cls, policy_dir: str | Path, cache_path: str | Path, embedder: Embedder) -> PolicyIndex:
+    def load_or_build(
+        cls, policy_dir: str | Path, cache_path: str | Path, embedder: Embedder, embedder_id: str = ""
+    ) -> PolicyIndex:
         policy_dir, cache_path = Path(policy_dir), Path(cache_path)
-        fingerprint = _docs_fingerprint(policy_dir)
+        fingerprint = _fingerprint(policy_dir, embedder_id)
         if cache_path.exists():
             cached = np.load(cache_path, allow_pickle=False)
             if str(cached["fingerprint"]) == fingerprint:

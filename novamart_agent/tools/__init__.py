@@ -18,7 +18,8 @@ from novamart_agent.tools.orders import OrderService
 def _index() -> PolicyIndex:
     from novamart_agent.embeddings import GeminiEmbedder
 
-    return PolicyIndex.load_or_build(POLICY_DIR, INDEX_PATH, GeminiEmbedder())
+    embedder = GeminiEmbedder()
+    return PolicyIndex.load_or_build(POLICY_DIR, INDEX_PATH, embedder, embedder_id=embedder.id)
 
 
 @cache

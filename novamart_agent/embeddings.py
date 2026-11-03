@@ -18,6 +18,7 @@ class GeminiEmbedder:
         )  # Gemini API key or Vertex AI, from env
         self._model = model
         self._dims = dimensions
+        self.id = f"{model}/{dimensions}"  # part of the index cache key
 
     def __call__(self, texts: list[str], kind: Literal["document", "query"]) -> np.ndarray:
         result = self._client.models.embed_content(
