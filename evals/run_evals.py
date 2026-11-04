@@ -31,6 +31,8 @@ async def run_case(case: dict, judge, sem: asyncio.Semaphore) -> dict:
         calls, results, answer = [], [], ""
         for text in turns:
             turn = await session.ask(text)
+            if turn.error:  # API failure answered with a fallback message: not the agent's fault
+                raise RuntimeError(f"model call failed ({turn.error})")
             calls += turn.tool_calls
             results += turn.tool_results
             answer = turn.answer  # score the final answer; tool usage across all turns

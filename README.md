@@ -35,10 +35,10 @@ Run everything from the repo root. The mock orders are dated around **3 Nov 2026
 ### 1. Offline tests (free, ~1 s, no API calls)
 
 ```bash
-uv run pytest            # expect: 30 passed
+uv run pytest            # expect: 35 passed
 ```
 
-They cover the order service (date math, not-found), the ticket and gap stores, section chunking, retrieval ranking and cache invalidation (using a fake embedder), and the eval scoring rules.
+They cover the order service (date math, not-found), the ticket and gap stores, model-error fallback messages, section chunking, retrieval ranking and cache invalidation (using a fake embedder), and the eval scoring rules.
 
 ### 2. Dev UI (recommended, and used for the demo)
 
@@ -124,6 +124,7 @@ employee ──► ADK LlmAgent (Gemini Flash, temp 0.1)
 9. **Flash for the agent, Pro for the judge.** The agent runs on `gemini-3.5-flash`: employees are at a counter with a customer waiting, so latency and cost per question matter more than raw reasoning depth, and the hard parts (dates, retrieval) are handled in code. The judge runs on `gemini-3.1-pro-preview` because a judge as strong as the agent tends to approve its own kind of mistakes. Both are env-configurable. (`gemini-2.5-*`, the original plan, is no longer available to new API keys.)
 10. **Gemini API key by default, Vertex AI with one flag.** A reviewer can run this in two minutes with an AI Studio key and no GCP project. Setting `GOOGLE_GENAI_USE_VERTEXAI=true` switches the same code to Vertex AI (ADC, regional endpoints, VPC-SC, enterprise terms), which is the path for NovaMart. The `google-genai` client abstracts both, so nothing else changes.
 11. **Buy the platform, build the differentiating actions.** Gemini Enterprise already gives NovaMart SSO, a governed chat UI and document connectors, so rebuilding them would be waste. The custom ADK agent covers only what it can't do safely out of the box: live order lookups, role-based approval rules, and the escalation and knowledge-gap loop into Ops. It is registered into Gemini Enterprise so staff use one surface. Full rationale in [`PRODUCTION.md`](PRODUCTION.md).
+12. **Model failures degrade gracefully.** If Gemini fails (billing 402, quota 429, overload 503), an ADK `on_model_error_callback` logs the real error for Ops and returns a plain message the employee can act on ("contact the IT help desk" vs "try again in a minute") instead of an HTTP 500. The eval runner still counts these as `[ERROR]`, never as agent failures. This is tested offline by putting a fake failing model through the full ADK stack.
 
 **Assumptions:** NovaMart is US-based (dollars, Black Friday). The users are store employees, not customers. Policies are invented but realistic, with deliberate edge cases: category exceptions, holiday extensions, approval limits, cash refunds over \$200. The order system is read-only for the agent.
 

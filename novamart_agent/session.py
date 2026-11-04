@@ -3,6 +3,7 @@
 import uuid
 from dataclasses import dataclass, field
 
+from google.adk.agents import LlmAgent
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
@@ -17,11 +18,12 @@ class Turn:
     answer: str
     tool_calls: list[dict] = field(default_factory=list)
     tool_results: list[dict] = field(default_factory=list)
+    error: str | None = None  # set when the model call failed and a fallback message was returned
 
 
 class AgentSession:
-    def __init__(self, role: str = "associate"):
-        self._runner = InMemoryRunner(agent=root_agent, app_name=APP)
+    def __init__(self, role: str = "associate", agent: LlmAgent = root_agent):
+        self._runner = InMemoryRunner(agent=agent, app_name=APP)
         self._role = role
         self._user = f"employee-{role}"
         self._session_id: str | None = None
@@ -48,6 +50,8 @@ class AgentSession:
                 turn.tool_calls.append({"name": call.name, "args": dict(call.args or {})})
             for resp in event.get_function_responses():
                 turn.tool_results.append({"name": resp.name, "response": resp.response})
+            if event.error_code:
+                turn.error = event.error_code
             if event.is_final_response() and event.content and event.content.parts:
                 turn.answer += "".join(p.text or "" for p in event.content.parts if not p.thought)
         return turn
