@@ -193,4 +193,4 @@ Agent `gemini-3.5-flash`, judge `gemini-3.1-pro-preview`, clock pinned to 2026-1
 
 ---
 
-*Built with Claude Code as a pair programmer. Every design decision is recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).*
+*Every design decision is recorded in [`docs/DECISIONS.md`](docs/DECISIONS.md).*
