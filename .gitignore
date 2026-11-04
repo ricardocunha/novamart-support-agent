@@ -17,3 +17,6 @@ data/gaps.jsonl
 
 # adk web local sessions
 .adk/
+
+# IDE
+.idea/
