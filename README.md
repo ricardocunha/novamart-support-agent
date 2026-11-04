@@ -30,7 +30,7 @@ cp .env.example .env          # paste a Gemini API key from https://aistudio.goo
 
 ## Test it locally
 
-Run everything from the repo root. The mock orders are dated around **3 Nov 2026**, so prefix commands with `NOVAMART_TODAY=2026-11-03` to get the same day counts as the evals. Without it, today's date is used.
+Run everything from the repo root. The mock orders are dated around **3 Nov 2026**, and `.env.example` pins the demo clock there (`NOVAMART_TODAY=2026-11-03`), so the answers match the table below. If your `.env` predates that line, add it. Without it the agent uses the real date, so every "days since delivery" figure grows by one each day and the answers drift from the table.
 
 ### 1. Offline tests (free, ~1 s, no API calls)
 
@@ -43,7 +43,7 @@ They cover the order service (date math, not-found), the ticket and gap stores, 
 ### 2. Dev UI (recommended, and used for the demo)
 
 ```bash
-NOVAMART_TODAY=2026-11-03 uv run adk web .
+uv run adk web .
 ```
 
 Open http://localhost:8000 and pick **novamart_agent** in the top-left dropdown. The Events panel shows every tool call with its arguments and result. You're signed in as an **associate**; to sign in as a manager, restart with `NOVAMART_ROLE=manager`.
@@ -51,8 +51,8 @@ Open http://localhost:8000 and pick **novamart_agent** in the top-left dropdown.
 ### 3. Terminal chat
 
 ```bash
-NOVAMART_TODAY=2026-11-03 uv run python -m novamart_agent.chat --show-tools
-NOVAMART_TODAY=2026-11-03 uv run python -m novamart_agent.chat --show-tools --role manager
+uv run python -m novamart_agent.chat --show-tools
+uv run python -m novamart_agent.chat --show-tools --role manager
 ```
 
 `--show-tools` prints each tool call before the answer. Ctrl-D quits.
@@ -61,7 +61,7 @@ NOVAMART_TODAY=2026-11-03 uv run python -m novamart_agent.chat --show-tools --ro
 
 | Ask | Expect |
 |---|---|
-| *Customer wants to return the TV from order NM-1010. Can I process it?* | Order + policy combined. **Associate:** eligible, but $649 is over the $500 limit, so call your manager. **Manager:** you can approve it yourself |
+| *Customer wants to return the TV from order NM-1010. Can I process it?* | Order + policy combined. **Associate:** eligible, but \$649 is over the \$500 limit, so call your manager. **Manager:** you can approve it yourself |
 | *Order NM-1009 never arrived*, then *yes, open the ticket* | 14 business days late, so treated as lost (reship or refund), then an `OPS-…` ticket ID |
 | *Can the shoes from order NM-1001 be returned?* | Yes: 14 days since delivery, within the 30-day window, with a citation |
 | *Do we offer gift wrapping?* | Graceful decline: "not covered", gap logged, ticket offered |
@@ -125,7 +125,7 @@ employee ──► ADK LlmAgent (Gemini Flash, temp 0.1)
 10. **Gemini API key by default, Vertex AI with one flag.** A reviewer can run this in two minutes with an AI Studio key and no GCP project. Setting `GOOGLE_GENAI_USE_VERTEXAI=true` switches the same code to Vertex AI (ADC, regional endpoints, VPC-SC, enterprise terms), which is the path for NovaMart. The `google-genai` client abstracts both, so nothing else changes.
 11. **Buy the platform, build the differentiating actions.** Gemini Enterprise already gives NovaMart SSO, a governed chat UI and document connectors, so rebuilding them would be waste. The custom ADK agent covers only what it can't do safely out of the box: live order lookups, role-based approval rules, and the escalation and knowledge-gap loop into Ops. It is registered into Gemini Enterprise so staff use one surface. Full rationale in [`PRODUCTION.md`](PRODUCTION.md).
 
-**Assumptions:** NovaMart is US-based (dollars, Black Friday). The users are store employees, not customers. Policies are invented but realistic, with deliberate edge cases: category exceptions, holiday extensions, approval limits, cash refunds over $200. The order system is read-only for the agent.
+**Assumptions:** NovaMart is US-based (dollars, Black Friday). The users are store employees, not customers. Policies are invented but realistic, with deliberate edge cases: category exceptions, holiday extensions, approval limits, cash refunds over \$200. The order system is read-only for the agent.
 
 ---
 
@@ -159,10 +159,10 @@ Agent `gemini-3.5-flash`, judge `gemini-3.1-pro-preview`, clock pinned to 2026-1
 
 | Iteration | Pass rate | What the failures showed | Change |
 |---|---|---|---|
-| 1 | 21/25 | Judge marked "Jan 31 **2027**" and ticket "urgency: high" as unsupported, because it never saw the date or the tool *calls* · decline regex missed "do not *currently* cover" · **agent** left out that a $649 return needs a manager override | Judge gets the same context as the agent (date, persona, tool calls) · wider regex · prompt: always say who approves |
+| 1 | 21/25 | Judge marked "Jan 31 **2027**" and ticket "urgency: high" as unsupported, because it never saw the date or the tool *calls* · decline regex missed "do not *currently* cover" · **agent** left out that a \$649 return needs a manager override | Judge gets the same context as the agent (date, persona, tool calls) · wider regex · prompt: always say who approves |
 | 2 | 22/25 | Judge penalised the word "NovaMart" (no company context) · **agent** invented "involve your manager for an exception" | Company context for the judge · prompt: never invent exceptions or approval paths |
 | 3–4 | 20/25, 24/25 | **Variance.** Same code, 4-point swing. 4 of 5 failures were one pattern: small, helpful-sounding embellishments ("gift receipt", "submit the cheque request in the system", "Ops will process the carrier claim") · one **retrieval miss**: the approval-limits section was never searched | Prompt: answer only what changes this case, no unstated procedural steps · also search approval limits for refunds, credits and waivers |
-| 5–6 | 24/25, 23/25 | **Agent** misapplied the $500 returns limit to a lost order after ticketing ("you can refund at the counter") · judge treated "I can open a ticket" as invented (didn't know the tools) | Ticket confirmations hand ownership to Ops · judge told the assistant's capabilities |
+| 5–6 | 24/25, 23/25 | **Agent** misapplied the \$500 returns limit to a lost order after ticketing ("you can refund at the counter") · judge treated "I can open a ticket" as invented (didn't know the tools) | Ticket confirmations hand ownership to Ops · judge told the assistant's capabilities |
 | 7–9 | 25/25, 25/25, 24/25 | Only failure was the regex again ("do not *state*"), with judge 5/5 | Decline wording check made phrasing-tolerant (the tool call is the real signal) |
 | Pre-review final | 25/25 | Faithfulness 5.00, correctness 5.00 | superseded by the run below |
 | Post-review | 25/25 (deterministic only) | After code review tightened the checks (multi-ID citation brackets parsed; no ticket may be auto-created in single-turn cases) | Judge skipped: the Pro model's Tier-1 cap of 250 requests/day was used up by the runs above |
