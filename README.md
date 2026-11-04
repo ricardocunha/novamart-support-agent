@@ -50,12 +50,28 @@ Open http://localhost:8000 and pick **novamart_agent** in the top-left dropdown.
 
 ### 3. Terminal chat
 
+Run from the **repo root** (the folder with `pyproject.toml`), so `uv` uses the project environment and the agent reads your `.env`:
+
 ```bash
-uv run python -m novamart_agent.chat --show-tools
-uv run python -m novamart_agent.chat --show-tools --role manager
+cd novamart-support-agent
+
+uv run python -m novamart_agent.chat --show-tools                  # signed in as an associate
+uv run python -m novamart_agent.chat --show-tools --role manager   # signed in as a manager
+uv run python -m novamart_agent.chat                               # answers only, no tool trace
 ```
 
-`--show-tools` prints each tool call before the answer. Ctrl-D quits.
+| Flag | Effect |
+|---|---|
+| `--show-tools` | Prints each tool call (`get_order_status`, `search_policies`, …) with its arguments before the answer |
+| `--role associate\|manager` | Picks the signed-in persona; defaults to `NOVAMART_ROLE`, or `associate` |
+
+Type at the `you ›` prompt; Ctrl-D quits. A chat session keeps context, so multi-turn flows work (e.g. *"Order NM-1009 never arrived"* → *"yes, open the ticket"*).
+
+ADK's built-in terminal runner also works, without the flags above (set `NOVAMART_ROLE=manager` to switch persona; type `exit` to quit):
+
+```bash
+uv run adk run novamart_agent
+```
 
 ### Try these
 
